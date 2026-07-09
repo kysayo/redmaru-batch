@@ -1,18 +1,7 @@
 import { loadBrowserConfig, loadConfig } from './config.js';
 import { launchExtensionContext } from './browser.js';
-import { fetchIssue } from './redmineClient.js';
 import { waitForEnter } from './prompt.js';
-import { AI_UPDATED_FIELD_ID, getCustomFieldValue } from './customFields.js';
-
-const BUTTON_SELECTOR = '#redmaru-ai-answer-btn';
-const BUTTON_READY_TIMEOUT_MS = 15000;
-const POLL_INTERVAL_MS = 5000;
-// 拡張機能側の回答生成タイムアウト（90秒）より余裕を持たせる
-const POLL_TIMEOUT_MS = 150000;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { updateSingleIssue, POLL_INTERVAL_MS, POLL_TIMEOUT_MS } from './answerUpdater.js';
 
 async function main() {
   const issueIdArg = process.argv[2];
@@ -39,38 +28,14 @@ async function main() {
       'ログインが終わったら、このターミナルでEnterキーを押してください。',
   );
 
-  console.log(`\n対象チケット #${issueId} の現在の状態を取得します...`);
-  const beforeIssue = await fetchIssue(config, issueId);
-  const beforeAiUpdated = getCustomFieldValue(beforeIssue, AI_UPDATED_FIELD_ID);
-  console.log(`件名: ${beforeIssue.subject}`);
-  console.log(`現在のAI更新日時: ${beforeAiUpdated || '(未設定)'}`);
+  console.log(`\n対象チケット #${issueId} を処理します...`);
+  console.log(`「AI回答更新」ボタンをクリックし、Redmine側の更新をポーリングします（最大${POLL_TIMEOUT_MS / 1000}秒、${POLL_INTERVAL_MS / 1000}秒間隔）...`);
 
-  const issueUrl = `${redmineOrigin}/issues/${issueId}`;
-  console.log(`アクセス: ${issueUrl}`);
-  await page.goto(issueUrl, { waitUntil: 'domcontentloaded' });
+  const result = await updateSingleIssue(page, config, issueId, redmineOrigin, () => process.stdout.write('.'));
 
-  console.log('「AI回答更新」ボタンを待機します...');
-  const button = await page.waitForSelector(BUTTON_SELECTOR, { timeout: BUTTON_READY_TIMEOUT_MS });
-
-  console.log('ボタンをクリックします...');
-  await button.click();
-
-  console.log(`Redmine側の更新をポーリングします（最大${POLL_TIMEOUT_MS / 1000}秒、${POLL_INTERVAL_MS / 1000}秒間隔）...`);
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
-  let updated = false;
-  while (Date.now() < deadline) {
-    await sleep(POLL_INTERVAL_MS);
-    const current = await fetchIssue(config, issueId);
-    const currentAiUpdated = getCustomFieldValue(current, AI_UPDATED_FIELD_ID);
-    if (currentAiUpdated && currentAiUpdated !== beforeAiUpdated) {
-      updated = true;
-      console.log(`\n✓ 更新を検知しました（AI更新日時: ${currentAiUpdated}）`);
-      break;
-    }
-    process.stdout.write('.');
-  }
-
-  if (!updated) {
+  if (result.status === 'success') {
+    console.log(`\n✓ 更新を検知しました（AI更新日時: ${result.aiUpdatedAt}）`);
+  } else {
     console.log(
       '\n⚠ タイムアウトしました。拡張機能側でエラー・タイムアウトが起きた可能性があります。ブラウザ側のボタン表示やコンソールを確認してください。',
     );

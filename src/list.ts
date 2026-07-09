@@ -1,7 +1,7 @@
 import { loadConfig } from './config.js';
-import { fetchAllIssues } from './redmineClient.js';
-import { evaluateIssue } from './staleness.js';
+import { fetchTargets } from './targets.js';
 import { formatDurationJa, parseDurationMs } from './duration.js';
+import { getArgOverride } from './cli.js';
 import type { EvaluatedIssue } from './types.js';
 
 function formatRow(evaluated: EvaluatedIssue) {
@@ -16,16 +16,10 @@ function formatRow(evaluated: EvaluatedIssue) {
   };
 }
 
-function getThresholdOverride(): string | null {
-  const prefix = '--threshold=';
-  const arg = process.argv.slice(2).find((a) => a.startsWith(prefix));
-  return arg ? arg.slice(prefix.length) : null;
-}
-
 async function main() {
   const config = loadConfig();
 
-  const thresholdOverride = getThresholdOverride();
+  const thresholdOverride = getArgOverride('threshold');
   const thresholdStr = thresholdOverride ?? config.staleThreshold;
   const staleThresholdMs = parseDurationMs(thresholdStr);
   console.log(
@@ -33,12 +27,8 @@ async function main() {
       (thresholdOverride ? ' ※コマンドラインで上書き' : ''),
   );
 
-  const issues = await fetchAllIssues(config);
-
-  const evaluated = issues.map((issue) => evaluateIssue(issue, staleThresholdMs));
-  const targets = evaluated.filter((e) => e.reason !== 'fresh');
-
-  console.log(`取得件数: ${issues.length}件 / 対象（未回答・鮮度切れ）: ${targets.length}件\n`);
+  const { totalCount, targets } = await fetchTargets(config, staleThresholdMs);
+  console.log(`取得件数: ${totalCount}件 / 対象（未回答・鮮度切れ）: ${targets.length}件\n`);
 
   if (targets.length > 0) {
     console.table(targets.map(formatRow));

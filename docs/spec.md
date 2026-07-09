@@ -48,13 +48,17 @@ redmaru-batch/
     ├── config.ts             # config.jsonの読み込み・バリデーション
     ├── customFields.ts       # cf_4588/cf_4589カスタムフィールドの値取得ヘルパー
     ├── duration.ts            # 期間文字列("5m"等)のパース・表示用フォーマット
-    ├── staleness.ts           # JST日時パース・鮮度判定ロジック
+    ├── cli.ts                 # "--flag=value"形式のコマンドライン引数取得ヘルパー
+    ├── staleness.ts           # JST日時パース・鮮度判定ロジック（1チケット単位）
+    ├── targets.ts             # 対象チケット（未回答・鮮度切れ）一覧の取得（list/checkBrowser/batchが共有）
     ├── redmineClient.ts       # Redmine REST APIクライアント（一覧取得・単一チケット取得）
     ├── browser.ts             # 拡張機能入りPersistent Context起動
     ├── prompt.ts              # 対話的なEnterキー待ち（起動と実行の境界）
+    ├── answerUpdater.ts       # ボタンクリック＋完了ポーリングの共通処理（update-one/batchが共有）
     ├── list.ts                # コマンド: 対象チケット一覧（ドライラン）
     ├── checkBrowser.ts        # コマンド: 拡張機能入りブラウザの起動検証
-    └── updateOne.ts           # コマンド: チケット1件のボタンクリック＋完了検知
+    ├── updateOne.ts           # コマンド: チケット1件のボタンクリック＋完了検知
+    └── batch.ts               # コマンド: 対象チケット全件を逐次処理する本バッチ
 ```
 
 ### 設定ファイル（config.json）
@@ -74,7 +78,7 @@ redmaru-batch/
 `view-customize`リポジトリの `src/script_05.txt`（Redmineチケット詳細ページで鮮度警告を表示するView Customizeスクリプト）と同じ判定条件をNode側で再現している（`src/staleness.ts`）。
 
 1. `cf_4589`（AI回答）が空 → **未回答**（対象）
-2. `cf_4589` が空でなく、`cf_4588`（AI更新日時）と `updated_on`（チケット更新日時）の差が `staleDaysThreshold` を超える → **鮮度切れ**（対象）
+2. `cf_4589` が空でなく、`cf_4588`（AI更新日時）と `updated_on`（チケット更新日時）の差が `staleThreshold` を超える → **鮮度切れ**（対象）
 3. それ以外 → 最新（対象外）
 
 `cf_4588` は `YYYY-MM-DD HH:mm:ss` 形式のJST固定文字列（拡張機能側の `formatDateTimeJst` が生成）。Node実行環境のタイムゾーンに依存させないよう、UTC基準で組み立ててからJSTオフセット（9時間）を引く形でパースしている（`parseJstDatetime`）。
@@ -101,7 +105,16 @@ redmaru-batch/
 3. Redmine REST APIを5秒間隔・最大150秒ポーリングし、`cf_4588` が基準値から変化したら完了とみなす（拡張機能側の回答生成タイムアウトが90秒のため、余裕を持たせている）
 4. タイムアウトした場合は拡張機能側でエラー・タイムアウトが起きている可能性がある旨を表示
 
-完了検知を拡張機能の内部通知（`AUTO_ANSWER_STATUS`）に依存させず、Redmine REST APIのポーリングのみで行っているのは、`my-redmaru-app` 側の設計方針（バッチ専用コードパスを作らない）に合わせたもの。
+完了検知を拡張機能の内部通知（`AUTO_ANSWER_STATUS`）に依存させず、Redmine REST APIのポーリングのみで行っているのは、`my-redmaru-app` 側の設計方針（バッチ専用コードパスを作らない）に合わせたもの。クリック＋ポーリングの実処理は `src/answerUpdater.ts` の `updateSingleIssue()` に切り出してあり、`update-one` と `batch` の両方から呼ばれる。
+
+### `npm run batch`（対象チケット全件の自動処理）
+
+`list` と同じ条件（`staleThreshold`、`--threshold=` 上書き）で対象チケットを取得し、`updateSingleIssue()` を1件ずつ**逐次**（同一タブ・順番に、並列なし）呼び出す。
+
+- 1件が失敗（タイムアウト・例外）しても処理を止めず次のチケットに進む。人間の確認ゲートは設けない方針（`my-redmaru-app`の単発ボタンと同じ、`docs/handoff-ai-answer-automation.md`参照）
+- 各チケットの処理後、次に移る前に5秒待つ（社内AIチャットへ連続で送信し続けることを避けるための簡易的なレート制御）
+- 全件処理後、成功・タイムアウト・エラーの件数と、失敗したチケットのID・件名・エラー内容を一覧表示する
+- 並列処理（複数タブで同時に複数チケットを処理する）は採用していない。社内AIチャット側が同時アクセスにどう反応するか未検証で、リスクが読めないため（詳細は下記「並列処理を見送っている理由」）
 
 ## 技術的な注意点・ハマりどころ
 
@@ -119,9 +132,19 @@ Google Chromeは**バージョン137以降、stable channelで`--load-extension`
 
 `browser.extensionPath`・`browser.userDataDir` は当初、開発PC上の実在するパスを例として書いていたが、それが「本物のパスに見えてしまい別PCでの書き換え忘れに気づきにくい」問題を実際に起こした。`YOUR_REDMINE_API_KEY`と同様、明らかにダミーだと分かる値（`REPLACE_WITH_...`）にしている。`loadBrowserConfig()` は起動前に `extensionPath` に `manifest.json` が実在するかチェックし、無ければ分かりやすいエラーを出す。
 
+### 並列処理を見送っている理由
+
+複数タブで同時に複数チケットを処理すれば処理時間は短縮できるが、以下が未検証のため今回は見送った。
+
+- 社内AIチャット（MaruCha）側が同一セッションからの同時複数リクエストにどう反応するか（正常に個別処理されるのか、混線するのか、レート制限があるのか）不明
+- `my-redmaru-app`拡張機能の `aichat.content.ts` は1つのタブ・1つのリクエストを前提に実装されている（`inFlightRequestId`によるチケット詳細ページ側の多重クリック防止はあるが、複数タブを同時に開く使い方は元々想定されていない）
+
+対象チケット数が多く逐次処理の所要時間が問題になった場合に、改めて検証の上で検討する。
+
 ## 今後の開発（未実装）
 
-- 対象チケット一覧を逐次ループし、`update-one` と同じ処理を複数チケットに対して自動で繰り返す本バッチ処理へ拡張（1タブで逐次処理する方針。並列処理は社内AIチャット側の挙動が未知数なため見送り）
+- 処理件数が多い場合の実行時間の見積もり表示
+- 途中経過の永続化（中断・再開ができるようにする）
 
 ## 関連リポジトリ・ドキュメント
 

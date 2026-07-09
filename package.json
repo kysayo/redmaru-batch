@@ -7,7 +7,8 @@
   "scripts": {
     "list": "tsx src/list.ts",
     "check-browser": "tsx src/checkBrowser.ts",
-    "update-one": "tsx src/updateOne.ts"
+    "update-one": "tsx src/updateOne.ts",
+    "batch": "tsx src/batch.ts"
   },
   "dependencies": {
     "playwright": "^1.49.0"

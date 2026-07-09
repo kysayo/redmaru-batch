@@ -1,7 +1,6 @@
 import { loadBrowserConfig, loadConfig } from './config.js';
 import { launchExtensionContext } from './browser.js';
-import { fetchAllIssues } from './redmineClient.js';
-import { evaluateIssue } from './staleness.js';
+import { fetchTargets } from './targets.js';
 import { waitForEnter } from './prompt.js';
 import { parseDurationMs } from './duration.js';
 
@@ -12,7 +11,7 @@ async function main() {
   const config = loadConfig();
   const browserConfig = loadBrowserConfig(config);
 
-  console.log('拡張機能入りのChromeを起動します（専用プロファイル・システムのChromeを使用）...');
+  console.log('拡張機能入りのブラウザを起動します...');
   const context = await launchExtensionContext(browserConfig);
   const page = context.pages()[0] ?? (await context.newPage());
 
@@ -25,12 +24,9 @@ async function main() {
   );
 
   console.log('\n対象チケットを1件取得して確認に使います...');
-  const issues = await fetchAllIssues(config);
   const staleThresholdMs = parseDurationMs(config.staleThreshold);
-  const target = issues
-    .map((issue) => evaluateIssue(issue, staleThresholdMs))
-    .find((e) => e.reason !== 'fresh');
-  const sampleIssue = target?.issue ?? issues[0] ?? null;
+  const { targets } = await fetchTargets(config, staleThresholdMs);
+  const sampleIssue = targets[0]?.issue ?? null;
 
   const targetUrl = sampleIssue ? `${redmineOrigin}/issues/${sampleIssue.id}` : redmineOrigin;
   console.log(`アクセス: ${targetUrl}`);
@@ -53,7 +49,7 @@ async function main() {
       );
     }
   } else {
-    console.log('チケットが1件も取得できなかったため、ボタン検出はスキップしました。');
+    console.log('対象（未回答・鮮度切れ）のチケットが無いため、ボタン検出はスキップしました。');
   }
 
   console.log('\n確認が終わったら、このブラウザウィンドウを閉じてください（閉じるとこのプロセスも終了します）。');
