@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { BrowserConfig, Config } from './types.js';
+import { parseDurationMs } from './duration.js';
 
 const CONFIG_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'config.json');
 
@@ -34,8 +35,16 @@ export function loadConfig(): Config {
   if (!config.redmine?.apiKey || config.redmine.apiKey === 'YOUR_REDMINE_API_KEY') {
     throw new Error('config.json の redmine.apiKey が未設定です。');
   }
-  if (typeof config.staleDaysThreshold !== 'number') {
-    throw new Error('config.json の staleDaysThreshold（数値・日数）が未設定です。');
+  if (typeof config.staleThreshold !== 'string') {
+    throw new Error(
+      'config.json の staleThreshold（期間文字列、例: "1d"）が未設定です。',
+    );
+  }
+  try {
+    parseDurationMs(config.staleThreshold);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`config.json の staleThreshold が不正です: ${message}`);
   }
 
   return config as Config;

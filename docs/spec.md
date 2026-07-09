@@ -47,6 +47,7 @@ redmaru-batch/
     ├── types.ts             # Config・RedmineIssue等の型定義
     ├── config.ts             # config.jsonの読み込み・バリデーション
     ├── customFields.ts       # cf_4588/cf_4589カスタムフィールドの値取得ヘルパー
+    ├── duration.ts            # 期間文字列("5m"等)のパース・表示用フォーマット
     ├── staleness.ts           # JST日時パース・鮮度判定ロジック
     ├── redmineClient.ts       # Redmine REST APIクライアント（一覧取得・単一チケット取得）
     ├── browser.ts             # 拡張機能入りPersistent Context起動
@@ -64,7 +65,7 @@ redmaru-batch/
 |---|---|
 | `redmine.issuesListUrl` | Redmineのチケット一覧画面で絞り込み（トラッカー・ステータス等）をした状態のURLをそのままコピペする。内部で `/issues` → `/issues.json` に変換して使う（`/projects/xxx/issues` のようなプロジェクト配下のURLにも対応）。列表示用パラメータ（`c[]=...`）が混ざっていてもRedmine APIは無視するので問題ない |
 | `redmine.apiKey` | 自分のRedmine APIキー（Redmineの「個人設定」画面で確認できる値）。拡張機能側は `ViewCustomize.context.user.apiKey` から動的取得するが、Node単体では取得元が無いため設定ファイル経由で渡す |
-| `staleDaysThreshold` | AI更新日時（`cf_4588`）とチケット更新日時（`updated_on`）の差がこの日数を超えたら「鮮度切れ」とみなす |
+| `staleThreshold` | AI更新日時（`cf_4588`）とチケット更新日時（`updated_on`）の差がこの期間を超えたら「鮮度切れ」とみなす。期間文字列（`src/duration.ts`）で指定する（例: `"1d"`=1日, `"5m"`=5分, `"1h"`=1時間, `"30s"`=30秒）。大規模リリース直後など問い合わせが急増している時期は数分単位に短縮することを想定している。`npm run list` は `--threshold=5m` でコマンドラインから一時的に上書きできる（`config.json` 自体は変更しない） |
 | `browser.extensionPath` | `manifest.json` があるフォルダへの絶対パス。**PCごとに実際の場所が変わるので必ず書き換える**（自分のローカルビルド `.output/chrome-mv3` か、チーム配布用に展開したフォルダか） |
 | `browser.userDataDir` | Playwright専用のChromeプロファイル保存先（存在しなくても自動作成される）。普段使いのプロファイルとは別の空フォルダにすること |
 

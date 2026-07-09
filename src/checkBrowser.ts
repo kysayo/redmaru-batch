@@ -3,6 +3,7 @@ import { launchExtensionContext } from './browser.js';
 import { fetchAllIssues } from './redmineClient.js';
 import { evaluateIssue } from './staleness.js';
 import { waitForEnter } from './prompt.js';
+import { parseDurationMs } from './duration.js';
 
 const BUTTON_SELECTOR = '#redmaru-ai-answer-btn';
 const BUTTON_WAIT_MS = 10000;
@@ -25,8 +26,9 @@ async function main() {
 
   console.log('\n対象チケットを1件取得して確認に使います...');
   const issues = await fetchAllIssues(config);
+  const staleThresholdMs = parseDurationMs(config.staleThreshold);
   const target = issues
-    .map((issue) => evaluateIssue(issue, config.staleDaysThreshold))
+    .map((issue) => evaluateIssue(issue, staleThresholdMs))
     .find((e) => e.reason !== 'fresh');
   const sampleIssue = target?.issue ?? issues[0] ?? null;
 

@@ -3,7 +3,8 @@ export interface Config {
     issuesListUrl: string;
     apiKey: string;
   };
-  staleDaysThreshold: number;
+  /** 期間文字列（例: "1d"=1日, "5m"=5分, "1h"=1時間, "30s"=30秒） */
+  staleThreshold: string;
   browser?: {
     extensionPath: string;
     userDataDir: string;
@@ -40,5 +41,6 @@ export interface EvaluatedIssue {
   issue: RedmineIssue;
   aiUpdatedOn: Date | null;
   reason: StaleReason;
-  staleDays: number | null;
+  /** 閾値との比較に使ったAI更新日時とチケット更新日時の差（ミリ秒） */
+  staleDiffMs: number | null;
 }

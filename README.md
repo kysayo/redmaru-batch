@@ -20,7 +20,7 @@ cp config.example.json config.json
 |---|---|
 | `redmine.issuesListUrl` | Redmineのチケット一覧画面で絞り込み（トラッカー・ステータス等）をした状態のURLをブラウザのアドレスバーからそのままコピペする |
 | `redmine.apiKey` | 自分のRedmine APIキー（Redmineの「個人設定」画面で確認できる値） |
-| `staleDaysThreshold` | AI回答日時とチケット更新日時の差がこの日数を超えたら「鮮度切れ」とみなす |
+| `staleThreshold` | AI回答日時とチケット更新日時の差がこの期間を超えたら「鮮度切れ」とみなす。期間文字列で指定（例: `"1d"`=1日, `"5m"`=5分, `"1h"`=1時間, `"30s"`=30秒） |
 | `browser.extensionPath` | `manifest.json` があるフォルダ（`my-redmaru-app` のビルド成果物 `.output/chrome-mv3`）への絶対パス。**PCごとに実際の場所が変わるので必ず書き換えること**（下記参照） |
 | `browser.userDataDir` | Playwright専用のChromeプロファイル保存先。**普段使いのChromeプロファイルとは別の空フォルダを指定すること**（排他ロックで競合するため）。初回はここに手動でRedmine・社内AIチャットのSSOログインをしておく |
 
@@ -42,6 +42,14 @@ npm run list
 ```
 
 対象チケット（未回答 or 鮮度切れ）の一覧がコンソールに表示される。
+
+`staleThreshold` はコマンドラインで一時的に上書きできる（`config.json` の値は変更しない）。
+
+```
+npm run list -- --threshold=5m
+```
+
+大規模リリース直後などで問い合わせが急増している時にだけ短い閾値で回す、といった使い方を想定している。
 
 ### 拡張機能入りブラウザの起動検証
 

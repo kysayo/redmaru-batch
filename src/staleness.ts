@@ -15,23 +15,22 @@ export function parseJstDatetime(text: string): Date | null {
   return new Date(utcMs - JST_OFFSET_MS);
 }
 
-export function evaluateIssue(issue: RedmineIssue, staleDaysThreshold: number): EvaluatedIssue {
+export function evaluateIssue(issue: RedmineIssue, staleThresholdMs: number): EvaluatedIssue {
   const answerText = getCustomFieldValue(issue, AI_ANSWER_FIELD_ID);
   if (!answerText) {
-    return { issue, aiUpdatedOn: null, reason: 'unanswered', staleDays: null };
+    return { issue, aiUpdatedOn: null, reason: 'unanswered', staleDiffMs: null };
   }
 
   const aiUpdatedText = getCustomFieldValue(issue, AI_UPDATED_FIELD_ID);
   const aiUpdatedOn = parseJstDatetime(aiUpdatedText);
   if (!aiUpdatedOn) {
     // AI回答はあるがAI更新日時が未設定・不正 → 比較できないため鮮度切れ扱いにする
-    return { issue, aiUpdatedOn: null, reason: 'stale', staleDays: null };
+    return { issue, aiUpdatedOn: null, reason: 'stale', staleDiffMs: null };
   }
 
   const updatedOn = new Date(issue.updated_on);
   const diffMs = updatedOn.getTime() - aiUpdatedOn.getTime();
-  const staleDays = diffMs / (24 * 60 * 60 * 1000);
-  const reason: EvaluatedIssue['reason'] = staleDays > staleDaysThreshold ? 'stale' : 'fresh';
+  const reason: EvaluatedIssue['reason'] = diffMs > staleThresholdMs ? 'stale' : 'fresh';
 
-  return { issue, aiUpdatedOn, reason, staleDays };
+  return { issue, aiUpdatedOn, reason, staleDiffMs: diffMs };
 }
