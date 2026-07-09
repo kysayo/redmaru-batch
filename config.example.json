@@ -5,7 +5,7 @@
   },
   "staleDaysThreshold": 1,
   "browser": {
-    "extensionPath": "E:/Projects/my-redmaru-app/.output/chrome-mv3",
-    "userDataDir": "C:/PlaywrightProfiles/redmaru"
+    "extensionPath": "REPLACE_WITH_EXTENSION_FOLDER_PATH",
+    "userDataDir": "REPLACE_WITH_PLAYWRIGHT_PROFILE_DIR"
   }
 }

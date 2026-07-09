@@ -21,8 +21,15 @@ cp config.example.json config.json
 | `redmine.issuesListUrl` | Redmineのチケット一覧画面で絞り込み（トラッカー・ステータス等）をした状態のURLをブラウザのアドレスバーからそのままコピペする |
 | `redmine.apiKey` | 自分のRedmine APIキー（Redmineの「個人設定」画面で確認できる値） |
 | `staleDaysThreshold` | AI回答日時とチケット更新日時の差がこの日数を超えたら「鮮度切れ」とみなす |
-| `browser.extensionPath` | `my-redmaru-app` のビルド成果物フォルダ（`npm run build` で生成される `.output/chrome-mv3`）への絶対パス |
+| `browser.extensionPath` | `manifest.json` があるフォルダ（`my-redmaru-app` のビルド成果物 `.output/chrome-mv3`）への絶対パス。**PCごとに実際の場所が変わるので必ず書き換えること**（下記参照） |
 | `browser.userDataDir` | Playwright専用のChromeプロファイル保存先。**普段使いのChromeプロファイルとは別の空フォルダを指定すること**（排他ロックで競合するため）。初回はここに手動でRedmine・社内AIチャットのSSOログインをしておく |
+
+`browser.extensionPath` はPC・状況によって実際の値が変わる。`config.example.json` には書き換え忘れに気づけるようダミー値を入れてあるので、必ず自分の環境の実パスに置き換えること。
+
+- 自分のPCで `my-redmaru-app` をclone・ビルドして使う場合: そのclone先の `.output/chrome-mv3`（例: `E:/Projects/my-redmaru-app/.output/chrome-mv3`）
+- `docs/SPEC.md` の「ビルド成果物の配布」に従ってGitHub ReleasesのzipをDLして展開した場合: 展開先フォルダ（`manifest.json` が直下にあるフォルダ）
+
+指定したパスに `manifest.json` が無い場合はエラーで教えてくれる。
 
 ## 実行
 
