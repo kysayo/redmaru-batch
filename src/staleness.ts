@@ -1,7 +1,6 @@
 import type { EvaluatedIssue, RedmineIssue } from './types.js';
+import { AI_ANSWER_FIELD_ID, AI_UPDATED_FIELD_ID, getCustomFieldValue } from './customFields.js';
 
-const AI_UPDATED_FIELD_ID = 4588;
-const AI_ANSWER_FIELD_ID = 4589;
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 /**
@@ -16,19 +15,13 @@ export function parseJstDatetime(text: string): Date | null {
   return new Date(utcMs - JST_OFFSET_MS);
 }
 
-function findCustomFieldValue(issue: RedmineIssue, fieldId: number): string {
-  const cf = issue.custom_fields?.find((f) => f.id === fieldId);
-  const value = cf?.value;
-  return typeof value === 'string' ? value.trim() : '';
-}
-
 export function evaluateIssue(issue: RedmineIssue, staleDaysThreshold: number): EvaluatedIssue {
-  const answerText = findCustomFieldValue(issue, AI_ANSWER_FIELD_ID);
+  const answerText = getCustomFieldValue(issue, AI_ANSWER_FIELD_ID);
   if (!answerText) {
     return { issue, aiUpdatedOn: null, reason: 'unanswered', staleDays: null };
   }
 
-  const aiUpdatedText = findCustomFieldValue(issue, AI_UPDATED_FIELD_ID);
+  const aiUpdatedText = getCustomFieldValue(issue, AI_UPDATED_FIELD_ID);
   const aiUpdatedOn = parseJstDatetime(aiUpdatedText);
   if (!aiUpdatedOn) {
     // AI回答はあるがAI更新日時が未設定・不正 → 比較できないため鮮度切れ扱いにする

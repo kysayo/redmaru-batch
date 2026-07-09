@@ -47,3 +47,18 @@ export async function fetchAllIssues(config: Config): Promise<RedmineIssue[]> {
 
   return issues;
 }
+
+export async function fetchIssue(config: Config, issueId: number): Promise<RedmineIssue> {
+  const redmineOrigin = new URL(config.redmine.issuesListUrl).origin;
+  const url = `${redmineOrigin}/issues/${issueId}.json`;
+
+  const res = await fetch(url, {
+    headers: { 'X-Redmine-API-Key': config.redmine.apiKey },
+  });
+  if (!res.ok) {
+    throw new Error(`Redmine APIエラー: ${res.status} ${res.statusText}（URL: ${url}）`);
+  }
+
+  const data = (await res.json()) as { issue: RedmineIssue };
+  return data.issue;
+}
