@@ -24,6 +24,8 @@ cp config.example.json config.json
 | `browser.extensionPath` | `manifest.json` があるフォルダ（`my-redmaru-app` のビルド成果物 `.output/chrome-mv3`）への絶対パス。**PCごとに実際の場所が変わるので必ず書き換えること**（下記参照） |
 | `browser.userDataDir` | Playwright専用のChromeプロファイル保存先。**普段使いのChromeプロファイルとは別の空フォルダを指定すること**（排他ロックで競合するため）。初回はここに手動でRedmine・社内AIチャットのSSOログインをしておく |
 
+**Windowsのパスを書くときは `\`（バックスラッシュ）ではなく `/`（スラッシュ）区切りにすること**（例: `C:/Users/xxx/Downloads/chrome-mv3`）。JSONでは `\` はエスケープ文字として扱われるため、`\U`や`\D`のようなWindowsパスそのままの記述はJSON構文エラーになる。Node.js（Windows）は `/` 区切りでも問題なくパスを認識する。
+
 `browser.extensionPath` はPC・状況によって実際の値が変わる。`config.example.json` には書き換え忘れに気づけるようダミー値を入れてあるので、必ず自分の環境の実パスに置き換えること。
 
 - 自分のPCで `my-redmaru-app` をclone・ビルドして使う場合: そのclone先の `.output/chrome-mv3`（例: `E:/Projects/my-redmaru-app/.output/chrome-mv3`）

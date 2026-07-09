@@ -22,7 +22,9 @@ export function loadConfig(): Config {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(
       `${CONFIG_PATH} のJSONとしての読み込みに失敗しました: ${message}\n` +
-        'issuesListUrl等の値に生の "（ダブルクォート）や改行が混ざっていないか確認してください。',
+        'よくある原因: (1) issuesListUrl等の値に生の "（ダブルクォート）や改行が混ざっている ' +
+        '(2) Windowsのパスを "C:\\Users\\..." のようにバックスラッシュ区切りで書いている' +
+        '（JSONでは \\ がエスケープ文字になるため構文エラーになる。"C:/Users/..." のように / 区切りにすること）',
     );
   }
 
