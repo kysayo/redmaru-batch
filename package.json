@@ -1,0 +1,19 @@
+{
+  "name": "redmaru-batch",
+  "description": "Redmineチケットの鮮度切れAI回答を一括検知するバッチツール（対象抽出フェーズ）",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "list": "tsx src/list.ts",
+    "check-browser": "tsx src/checkBrowser.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "redmine": {
+    "issuesListUrl": "https://misol-dev.cloud.redmine.jp/issues?utf8=%E2%9C%93&set_filter=1&f%5B%5D=tracker_id&op%5Btracker_id%5D=%3D&v%5Btracker_id%5D%5B%5D=1&f%5B%5D=status_id&op%5Bstatus_id%5D=o",
+    "apiKey": "YOUR_REDMINE_API_KEY"
+  },
+  "staleDaysThreshold": 1,
+  "browser": {
+    "extensionPath": "E:/Projects/my-redmaru-app/.output/chrome-mv3",
+    "userDataDir": "C:/PlaywrightProfiles/redmaru"
+  }
+}
